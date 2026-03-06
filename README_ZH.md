@@ -24,8 +24,8 @@
 | 特性 | 说明 |
 |------|------|
 | 🔌 无侵入接入 | 仅需传入自定义 `fetch`，业务代码零修改 |
-| 📝 完整记录 | 覆盖请求（messages、model、参数）和响应（content、usage、latency、error）两侧 |
-| 💾 落库灵活 | 支持本地 JSONL、Cloudflare D1，或两者组合 |
+| 📝 完整记录 | 覆盖请求（messages、model、params）和响应（content、usage、latency、error）两侧 |
+| 💾 落库灵活 | 支持本地文件、Cloudflare D1，或两者组合 |
 | ⚡ 写入模式可选 | `sync`（默认，先落库再返回）/ `async`（先返回，后台落库） |
 | 🏷️ 多 Agent 标识 | 通过 `source` 参数区分不同调用来源 |
 
@@ -67,8 +67,7 @@ const res = await client.chat.completions.create({
 });
 ```
 
-> 每次调用会在 JSONL 中追加两行：第一行仅含请求信息，第二行为完整记录。消费时按 `request_id` 取最后一条即可。
-
+> 每次调用会在 JSONL文件 中追加两行：第一行仅含请求信息，第二行为完整记录（请求信息和返回结果）。
 ---
 
 ### 二、仅落库到 Cloudflare D1

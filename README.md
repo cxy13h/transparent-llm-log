@@ -25,7 +25,7 @@ Ideal for the following scenarios:
 |---------|-------------|
 | 🔌 Zero Intrusion | Simply pass in a custom `fetch`; zero modifications needed to your business logic. |
 | 📝 Complete Records | Covers both the request (messages, model, params) and response (content, usage, latency, error) sides. |
-| 💾 Flexible Storage | Supports local JSONL files, Cloudflare D1 databases, or both simultaneously. |
+| 💾 Flexible Storage | Supports local files, Cloudflare D1 databases, or both simultaneously. |
 | ⚡ Configurable Write Mode | `sync` (default, wait for write to finish before returning) / `async` (return immediately, write in background). |
 | 🏷️ Multi-Agent Tracking | Distinguish calls from different origins using the `source` parameter. |
 
@@ -67,7 +67,7 @@ const res = await client.chat.completions.create({
 });
 ```
 
-> Each API call appends two lines to the JSONL file: the first line contains only the request info, and the second is the complete record. When consuming the logs, simply group by `request_id` and pick the last entry.
+> Each API call appends two lines to the JSONL file: the first line contains only the request info, and the second is the complete record (request info and response). 
 
 ---
 
