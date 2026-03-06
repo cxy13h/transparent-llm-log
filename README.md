@@ -1,16 +1,34 @@
 # transparent-llm-log
 
-无感记录每次 **OpenAI Chat Completions** 的请求与回调结果，支持落库到本地 JSONL 或 Cloudflare D1，便于审计、排查与用量统计。
+## 功能作用
 
-## 特性
+`transparent-llm-log` 是一个 **无感 LLM 调用日志记录库**，通过劫持 OpenAI SDK 的 `fetch` 参数，自动记录每次 Chat Completions 的请求与响应结果。
 
-- **无侵入**：通过配置传入自定义 fetch 即可接入，业务代码不改
-- **完整记录**：请求（messages、model、参数）、响应（content、usage、latency_ms、success）、错误信息
-- **落库灵活**：仅本地 / 仅 D1 / 本地 + D1，可任选或组合
+适用于以下场景：
+
+- 🔍 **调用审计**：完整记录提示词、模型参数、响应内容，便于合规审查
+- 🐛 **问题排查**：记录错误类型、状态码、延迟等信息，快速定位故障
+- 📊 **用量统计**：记录 token 消耗（prompt / completion / total），支撑成本分析
+
+---
+
+## 简要特性
+
+| 特性 | 说明 |
+|------|------|
+| 🔌 无侵入接入 | 仅需传入自定义 `fetch`，业务代码零修改 |
+| 📝 完整记录 | 覆盖请求（messages、model、参数）和响应（content、usage、latency、error）两侧 |
+| 💾 落库灵活 | 支持本地 JSONL、Cloudflare D1，或两者组合 |
+| ⚡ 写入模式可选 | `sync`（默认，先落库再返回）/ `async`（先返回，后台落库） |
+| 🏷️ 多 Agent 标识 | 通过 `source` 参数区分不同调用来源 |
+
+---
 
 ## 环境要求
 
-- Node.js 18+
+- **Node.js** ≥ 18
+
+---
 
 ## 安装
 
@@ -18,19 +36,26 @@
 npm install transparent-llm-log
 ```
 
+---
+
 ## 快速使用
+
+### 一、仅落库到本地
+
+最简用法，日志写入本地文件，目录不存在会自动创建。
 
 ```ts
 import OpenAI from "openai";
 import { createFileRecorder, createLoggingFetch } from "transparent-llm-log";
 
 const recorder = createFileRecorder("logs/llm_calls.jsonl");
+
+
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
   fetch: createLoggingFetch({ recorder, source: "my_agent", writeMode: "async" }),
 });
 
-// 之后 client.chat.completions.create(...) 会被自动记录
 const res = await client.chat.completions.create({
   model: "gpt-4o-mini",
   messages: [{ role: "user", content: "Hello" }],
@@ -39,89 +64,39 @@ const res = await client.chat.completions.create({
 
 ---
 
-## 记录内容
+### 二、仅落库到 Cloudflare D1
 
-### 请求侧
+#### 1. 配置环境变量
 
-| 要素 | 说明 |
-|------|------|
-| 时间戳 | 请求发起时间（ISO），便于算延迟、排查 |
-| 提示词 / messages | 完整 messages，便于复现与审计 |
-| 模型 | model，用于统计用量、成本 |
-| 参数 | temperature、max_tokens 等 |
-| 请求 ID | 自生成 UUID |
-| 调用来源 | 可选 source，便于区分 Agent |
+在项目根目录创建 `.env` 文件，填入以下配置：
 
-### 响应侧（回调结果）
+```env
+# Cloudflare D1 配置（必填）
+TRANSPARENT_LLM_LOG_CLOUDFLARE_ACCOUNT_ID=你的_Cloudflare_Account_ID
+TRANSPARENT_LLM_LOG_CLOUDFLARE_D1_DATABASE_ID=你的_D1_Database_ID
+TRANSPARENT_LLM_LOG_CLOUDFLARE_API_TOKEN=你的_Cloudflare_API_Token
+```
 
-| 要素 | 说明 |
-|------|------|
-| 是否成功 | success，区分 2xx / 4xx / 5xx、超时、网络错误 |
-| 延迟 | latency_ms |
-| 回复内容 | response_message（content、role、tool_calls 等） |
-| Usage | prompt_tokens、completion_tokens、total_tokens |
-| finish_reason | stop / length / tool_calls 等 |
-| 错误信息 | 失败时的 error_type、error_message、status_code |
+> **获取方式：**
+> - `ACCOUNT_ID`：登录 [Cloudflare Dashboard](https://dash.cloudflare.com/) → 右侧栏可见
+> - `D1_DATABASE_ID`：在 Workers & Pages → D1 中创建数据库后获取
+> - `API_TOKEN`：在 My Profile → API Tokens 中创建，需包含 D1 写权限
 
----
+#### 2. 初始化数据库
 
-## 接入与行为
+首次使用前，需执行建表 SQL：
 
-将 `createLoggingFetch(...)` 的返回值作为 OpenAI 客户端的 `fetch` 传入即可，仅对 Chat Completions 请求做记录。
+```bash
+# 在 Cloudflare Dashboard 的 D1 控制台中执行 docs/schema.sql
+```
 
-### 落库时机
+参考 [schema.sql](./docs/schema.sql) 中的建表语句。
 
-等结果返回后再落库，不会在请求发出时先落库。每条记录包含请求与响应（或错误）的完整信息。
-
-### 同步 / 异步（writeMode）
-
-| 模式 | 说明 | 适用 |
-|------|------|------|
-| sync（默认） | 先落库完成再返回响应；落库失败会抛给调用方 | 需要「返回前已落库」或希望落库异常直接暴露 |
-| async | 先返回响应，落库在后台执行；落库失败仅打日志 | 优先降低延迟、落库允许最终一致 |
-
-异步模式下本地文件行顺序与请求完成顺序一致。不传 `writeMode` 时为 `"sync"`。
-
----
-
-## 落库方式（本地 / D1）
-
-| 方式 | 说明 |
-|------|------|
-| 仅本地文件 | `createFileRecorder(logPath)`，写入指定路径 JSONL，目录不存在会自动创建 |
-| 仅 D1 | `new LLMCallRecorder({ customWriter: createD1Writer(config) })`，通过 Cloudflare D1 REST API 写入 |
-| 本地 + D1 | `new LLMCallRecorder({ logPath, customWriter: createD1Writer(config) })` |
-
----
-
-## 环境变量与完整示例
-
-### 环境变量
-
-- 公共：`OPENAI_BASE_URL`、`OPENAI_API_KEY`，可选 `OPENAI_MODEL`
-- 写 D1 时：`TRANSPARENT_LLM_LOG_CLOUDFLARE_ACCOUNT_ID`、`TRANSPARENT_LLM_LOG_CLOUDFLARE_D1_DATABASE_ID`、`TRANSPARENT_LLM_LOG_CLOUDFLARE_API_TOKEN`  
-  可在项目根目录自建 `.env` 配置。
-
-### 仅落库到本地
+#### 3. 代码接入
 
 ```ts
 import "dotenv/config";
 import OpenAI from "openai";
-import { createFileRecorder, createLoggingFetch } from "transparent-llm-log";
-
-const recorder = createFileRecorder("logs/llm_calls.jsonl");
-const client = new OpenAI({
-  baseURL: process.env.OPENAI_BASE_URL,
-  apiKey: process.env.OPENAI_API_KEY,
-  fetch: createLoggingFetch({ recorder, source: "my_agent", writeMode: "async" }),
-});
-```
-
-### 仅落库到 D1
-
-D1 需先执行 [docs/schema.sql](./docs/schema.sql) 建表。
-
-```ts
 import { LLMCallRecorder, createLoggingFetch, createD1Writer } from "transparent-llm-log";
 
 const recorder = new LLMCallRecorder({
@@ -131,35 +106,47 @@ const recorder = new LLMCallRecorder({
     apiToken: process.env.TRANSPARENT_LLM_LOG_CLOUDFLARE_API_TOKEN!,
   }),
 });
+
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
   fetch: createLoggingFetch({ recorder, source: "my_agent" }),
 });
 ```
 
-### 同时写本地与 D1
+---
+
+### 三、同时落库到本地 + D1
+
+将本地文件路径与 D1 Writer 组合传入即可：
 
 ```ts
+import { LLMCallRecorder, createLoggingFetch, createD1Writer } from "transparent-llm-log";
+
 const recorder = new LLMCallRecorder({
   logPath: "logs/llm_calls.jsonl",
-  customWriter: createD1Writer(d1Config),
+  customWriter: createD1Writer({
+    accountId: process.env.TRANSPARENT_LLM_LOG_CLOUDFLARE_ACCOUNT_ID!,
+    databaseId: process.env.TRANSPARENT_LLM_LOG_CLOUDFLARE_D1_DATABASE_ID!,
+    apiToken: process.env.TRANSPARENT_LLM_LOG_CLOUDFLARE_API_TOKEN!,
+  }),
+});
+
+const client = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  fetch: createLoggingFetch({ recorder, source: "my_agent", writeMode: "async" }),
 });
 ```
 
 ---
 
-## 扩展
+## 文档说明
 
-- **流式**：当前仅支持非流式；流式预留了 `onStreamComplete` 回调，后续版本可支持。
-- **多 Agent**：为不同 Agent 传入不同 `source` 即可按来源区分。
+| 文档 | 说明 |
+|------|------|
+| [schema.sql](./docs/schema.sql) | D1 建表 SQL，首次使用 D1 落库前需执行 |
+| [chat-completions-protocol-review.md](./docs/chat-completions-protocol-review.md) | 记录字段与 OpenAI Chat Completions 协议的对应关系 |
 
 ---
-
-## 文档
-
-- [docs/schema.sql](./docs/schema.sql)：D1 建表 SQL
-- [docs/d1-schema-design.md](./docs/d1-schema-design.md)：D1 表结构说明
-- [docs/chat-completions-protocol-review.md](./docs/chat-completions-protocol-review.md)：与 Chat Completions 协议的对应关系
 
 ## License
 
