@@ -1,0 +1,23 @@
+# 环境与密钥（切勿提交）
+.env
+.env.local
+.env.*.local
+
+# 依赖与构建
+node_modules/
+dist/
+*.tsbuildinfo
+package-lock.json
+# 本功能生成的日志（运行或测试时产生）
+logs/
+*.jsonl
+
+# 系统与 IDE（可选，按需保留）
+.DS_Store
+Thumbs.db
+.npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.idea/
+.vscode/
