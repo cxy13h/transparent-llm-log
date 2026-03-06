@@ -112,9 +112,21 @@ export function createLoggingFetch(options: CreateLoggingFetchOptions): typeof f
       extra_params = ext.extra_params;
     }
 
+    // ---- 请求阶段落库（响应字段留空） ----
+    const requestRecord: LLMCallRecord = {
+      request_id: requestId,
+      timestamp_request: timestampRequest,
+      model,
+      messages,
+      extra_params,
+      success: false,
+      source,
+    };
+    doWrite(requestRecord);
+
     try {
       const response = await realFetch(input, init);
-      // 落库时机：在收到完整响应后再落库（含 success / latency_ms / response_message / usage 等），请求发出时不会先落库。
+      // 响应返回后，落库完整记录覆盖请求阶段的记录。
       const end = performance.now();
       const latencyMs = Math.round((end - start) * 100) / 100;
       const timestampResponse = new Date().toISOString();
@@ -147,6 +159,7 @@ export function createLoggingFetch(options: CreateLoggingFetchOptions): typeof f
         }
       }
 
+      // ---- 响应阶段落库（完整记录） ----
       const record: LLMCallRecord = {
         request_id: requestId,
         timestamp_request: timestampRequest,
@@ -172,6 +185,7 @@ export function createLoggingFetch(options: CreateLoggingFetchOptions): typeof f
       const latencyMs = Math.round((end - start) * 100) / 100;
       const timestampResponse = new Date().toISOString();
       const err = e instanceof Error ? e : new Error(String(e));
+      // ---- 响应阶段落库（异常） ----
       const record: LLMCallRecord = {
         request_id: requestId,
         timestamp_request: timestampRequest,

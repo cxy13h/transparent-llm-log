@@ -4,11 +4,16 @@
 
 `transparent-llm-log` 是一个 **无感 LLM 调用日志记录库**，通过劫持 OpenAI SDK 的 `fetch` 参数，自动记录每次 Chat Completions 的请求与响应结果。
 
-适用于以下场景：
+每次调用会落库 **两次**，通过同一个 `request_id` 关联：
 
-- 🔍 **调用审计**：完整记录提示词、模型参数、响应内容，便于合规审查
-- 🐛 **问题排查**：记录错误类型、状态码、延迟等信息，快速定位故障
-- 📊 **用量统计**：记录 token 消耗（prompt / completion / total），支撑成本分析
+1. **请求发出前** — 立即写入请求侧信息（model、messages、参数等），响应字段留空。即使后续网络超时或进程崩溃，也至少有一条请求记录可追溯
+2. **响应返回后** — 写入完整记录（补上 latency、response、usage、error 等），对 D1 会自动覆盖同一条记录
+
+适用场景：
+
+- 🔍 **调用审计** — 完整记录提示词、模型参数、响应内容，便于合规审查
+- 🐛 **问题排查** — 记录错误类型、状态码、延迟，快速定位故障
+- 📊 **用量统计** — 记录 token 消耗（prompt / completion / total），支撑成本分析
 
 ---
 
@@ -40,7 +45,7 @@ npm install transparent-llm-log
 
 ## 快速使用
 
-### 一、仅落库到本地
+### 一、仅落库到本地 JSONL
 
 最简用法，日志写入本地文件，目录不存在会自动创建。
 
@@ -49,10 +54,8 @@ import OpenAI from "openai";
 import { createFileRecorder, createLoggingFetch } from "transparent-llm-log";
 
 const recorder = createFileRecorder("logs/llm_calls.jsonl");
-
-
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: "你的 OpenAI API Key",
   fetch: createLoggingFetch({ recorder, source: "my_agent", writeMode: "async" }),
 });
 
@@ -62,56 +65,41 @@ const res = await client.chat.completions.create({
 });
 ```
 
+> 每次调用会在 JSONL 中追加两行：第一行仅含请求信息，第二行为完整记录。消费时按 `request_id` 取最后一条即可。
+
 ---
 
 ### 二、仅落库到 Cloudflare D1
 
-#### 1. 配置环境变量
+首次使用前需在 D1 控制台执行 [schema.sql](./docs/schema.sql) 建表。
 
-在项目根目录创建 `.env` 文件，填入以下配置：
+`createD1Writer` 接收三个参数，均可在 [Cloudflare Dashboard](https://dash.cloudflare.com/) 获取：
 
-```env
-# Cloudflare D1 配置（必填）
-TRANSPARENT_LLM_LOG_CLOUDFLARE_ACCOUNT_ID=你的_Cloudflare_Account_ID
-TRANSPARENT_LLM_LOG_CLOUDFLARE_D1_DATABASE_ID=你的_D1_Database_ID
-TRANSPARENT_LLM_LOG_CLOUDFLARE_API_TOKEN=你的_Cloudflare_API_Token
-```
-
-> **获取方式：**
-> - `ACCOUNT_ID`：登录 [Cloudflare Dashboard](https://dash.cloudflare.com/) → 右侧栏可见
-> - `D1_DATABASE_ID`：在 Workers & Pages → D1 中创建数据库后获取
-> - `API_TOKEN`：在 My Profile → API Tokens 中创建，需包含 D1 写权限
-
-#### 2. 初始化数据库
-
-首次使用前，需执行建表 SQL：
-
-```bash
-# 在 Cloudflare Dashboard 的 D1 控制台中执行 docs/schema.sql
-```
-
-参考 [schema.sql](./docs/schema.sql) 中的建表语句。
-
-#### 3. 代码接入
+| 参数 | 获取方式 |
+|------|----------|
+| `accountId` | Dashboard 右侧栏 Account ID |
+| `databaseId` | Workers & Pages → D1 → 对应数据库详情页 |
+| `apiToken` | My Profile → API Tokens，需含 D1 读写权限 |
 
 ```ts
-import "dotenv/config";
 import OpenAI from "openai";
 import { LLMCallRecorder, createLoggingFetch, createD1Writer } from "transparent-llm-log";
 
 const recorder = new LLMCallRecorder({
   customWriter: createD1Writer({
-    accountId: process.env.TRANSPARENT_LLM_LOG_CLOUDFLARE_ACCOUNT_ID!,
-    databaseId: process.env.TRANSPARENT_LLM_LOG_CLOUDFLARE_D1_DATABASE_ID!,
-    apiToken: process.env.TRANSPARENT_LLM_LOG_CLOUDFLARE_API_TOKEN!,
+    accountId: "你的 Account ID",
+    databaseId: "你的 D1 Database ID",
+    apiToken: "你的 API Token",
   }),
 });
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: "你的 OpenAI API Key",
   fetch: createLoggingFetch({ recorder, source: "my_agent" }),
 });
 ```
+
+> D1 使用 `INSERT OR REPLACE`，响应返回后的完整记录会自动覆盖请求阶段的记录，最终每次调用在 D1 中只保留一条完整记录。
 
 ---
 
@@ -125,14 +113,14 @@ import { LLMCallRecorder, createLoggingFetch, createD1Writer } from "transparent
 const recorder = new LLMCallRecorder({
   logPath: "logs/llm_calls.jsonl",
   customWriter: createD1Writer({
-    accountId: process.env.TRANSPARENT_LLM_LOG_CLOUDFLARE_ACCOUNT_ID!,
-    databaseId: process.env.TRANSPARENT_LLM_LOG_CLOUDFLARE_D1_DATABASE_ID!,
-    apiToken: process.env.TRANSPARENT_LLM_LOG_CLOUDFLARE_API_TOKEN!,
+    accountId: "你的 Account ID",
+    databaseId: "你的 D1 Database ID",
+    apiToken: "你的 API Token",
   }),
 });
 
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: "你的 OpenAI API Key",
   fetch: createLoggingFetch({ recorder, source: "my_agent", writeMode: "async" }),
 });
 ```

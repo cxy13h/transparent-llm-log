@@ -55,7 +55,7 @@ async function d1Query(
  * 写入为异步（fire-and-forget），不阻塞主流程。
  */
 export function createD1Writer(config: D1WriterConfig): (record: LLMCallRecord) => void {
-  const sql = `INSERT INTO llm_calls (
+  const sql = `INSERT OR REPLACE INTO llm_calls (
     request_id, timestamp_request, model, messages, extra_params,
     success, timestamp_response, latency_ms, response_message, usage,
     finish_reason, error_type, error_message, status_code, source
