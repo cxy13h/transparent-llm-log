@@ -4,7 +4,7 @@ English | [简体中文](./README_ZH.md)
 
 ## Overview
 
-`transparent-llm-log` is a **zero-intrusion LLM call logging library**. By wrapping the `fetch` function of the OpenAI SDK, it automatically records the request and response of every Chat Completions call.
+`transparent-llm-log` is a **zero-intrusion** LLM call logging library. By wrapping the `fetch` function of the OpenAI SDK, it automatically records the request and response of every Chat Completions call.
 
 Each API call is logged **twice** under the same `request_id`:
 

@@ -4,7 +4,7 @@
 
 ## 功能作用
 
-`transparent-llm-log` 是一个 **无感 LLM 调用日志记录库**，通过劫持 OpenAI SDK 的 `fetch` 参数，自动记录每次 Chat Completions 的请求与响应结果。
+`transparent-llm-log` 是一个 **无感** 的 LLM 调用日志记录库，通过劫持 OpenAI SDK 的 `fetch` 参数，自动记录每次 Chat Completions 的请求与响应结果。
 
 每次调用会落库 **两次**，通过同一个 `request_id` 关联：
 
