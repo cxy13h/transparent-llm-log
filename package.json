@@ -1,7 +1,7 @@
 {
   "name": "transparent-llm-log",
-  "version": "1.0.1",
-  "description": "无感记录 LLM（Chat Completions）调用与回调结果",
+  "version": "0.0.1",
+  "description": "a zero-intrusion LLM call logging library",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
