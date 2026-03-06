@@ -1,41 +1,43 @@
 # transparent-llm-log
 
-## 功能作用
+English | [简体中文](./README_ZH.md)
 
-`transparent-llm-log` 是一个 **无感 LLM 调用日志记录库**，通过劫持 OpenAI SDK 的 `fetch` 参数，自动记录每次 Chat Completions 的请求与响应结果。
+## Overview
 
-每次调用会落库 **两次**，通过同一个 `request_id` 关联：
+`transparent-llm-log` is a **zero-intrusion LLM call logging library**. By wrapping the `fetch` function of the OpenAI SDK, it automatically records the request and response of every Chat Completions call.
 
-1. **请求发出前** — 立即写入请求侧信息（model、messages、参数等），响应字段留空。即使后续网络超时或进程崩溃，也至少有一条请求记录可追溯
-2. **响应返回后** — 写入完整记录（补上 latency、response、usage、error 等），对 D1 会自动覆盖同一条记录
+Each API call is logged **twice** under the same `request_id`:
 
-适用场景：
+1. **Before the request is sent**: Logs the request context (model, messages, parameters, etc.) with empty response fields. This ensures you still have an audit trail even if the network times out or the process crashes.
+2. **After the response is received**: Logs the complete record (including latency, response, usage, error, etc.). When using D1, the initial record is automatically overwritten with this complete one.
 
-- 🔍 **调用审计** — 完整记录提示词、模型参数、响应内容，便于合规审查
-- 🐛 **问题排查** — 记录错误类型、状态码、延迟，快速定位故障
-- 📊 **用量统计** — 记录 token 消耗（prompt / completion / total），支撑成本分析
+Ideal for the following scenarios:
 
----
-
-## 简要特性
-
-| 特性 | 说明 |
-|------|------|
-| 🔌 无侵入接入 | 仅需传入自定义 `fetch`，业务代码零修改 |
-| 📝 完整记录 | 覆盖请求（messages、model、参数）和响应（content、usage、latency、error）两侧 |
-| 💾 落库灵活 | 支持本地 JSONL、Cloudflare D1，或两者组合 |
-| ⚡ 写入模式可选 | `sync`（默认，先落库再返回）/ `async`（先返回，后台落库） |
-| 🏷️ 多 Agent 标识 | 通过 `source` 参数区分不同调用来源 |
+- 🔍 **Call Auditing**: Keep a complete record of prompts, model parameters, and responses for compliance.
+- 🐛 **Troubleshooting**: Record error types, status codes, and latency to quickly pinpoint failures.
+- 📊 **Usage Analytics**: Log token consumption (prompt/completion/total) to support cost analysis.
 
 ---
 
-## 环境要求
+## Key Features
+
+| Feature | Description |
+|---------|-------------|
+| 🔌 Zero Intrusion | Simply pass in a custom `fetch`; zero modifications needed to your business logic. |
+| 📝 Complete Records | Covers both the request (messages, model, params) and response (content, usage, latency, error) sides. |
+| 💾 Flexible Storage | Supports local JSONL files, Cloudflare D1 databases, or both simultaneously. |
+| ⚡ Configurable Write Mode | `sync` (default, wait for write to finish before returning) / `async` (return immediately, write in background). |
+| 🏷️ Multi-Agent Tracking | Distinguish calls from different origins using the `source` parameter. |
+
+---
+
+## Requirements
 
 - **Node.js** ≥ 18
 
 ---
 
-## 安装
+## Installation
 
 ```bash
 npm install transparent-llm-log
@@ -43,11 +45,11 @@ npm install transparent-llm-log
 
 ---
 
-## 快速使用
+## Quick Start
 
-### 一、仅落库到本地 JSONL
+### 1. Log to a Local JSONL File
 
-最简用法，日志写入本地文件，目录不存在会自动创建。
+The simplest use case. Logs will be written to a local file, and the directory will be automatically created if it doesn't exist.
 
 ```ts
 import OpenAI from "openai";
@@ -55,7 +57,7 @@ import { createFileRecorder, createLoggingFetch } from "transparent-llm-log";
 
 const recorder = createFileRecorder("logs/llm_calls.jsonl");
 const client = new OpenAI({
-  apiKey: "你的 OpenAI API Key",
+  apiKey: "YOUR_OPENAI_API_KEY",
   fetch: createLoggingFetch({ recorder, source: "my_agent", writeMode: "async" }),
 });
 
@@ -65,21 +67,21 @@ const res = await client.chat.completions.create({
 });
 ```
 
-> 每次调用会在 JSONL 中追加两行：第一行仅含请求信息，第二行为完整记录。消费时按 `request_id` 取最后一条即可。
+> Each API call appends two lines to the JSONL file: the first line contains only the request info, and the second is the complete record. When consuming the logs, simply group by `request_id` and pick the last entry.
 
 ---
 
-### 二、仅落库到 Cloudflare D1
+### 2. Log strictly to Cloudflare D1
 
-首次使用前需在 D1 控制台执行 [schema.sql](./docs/schema.sql) 建表。
+Before executing, you need to create the table in your D1 database using [schema.sql](./docs/schema.sql).
 
-`createD1Writer` 接收三个参数，均可在 [Cloudflare Dashboard](https://dash.cloudflare.com/) 获取：
+The `createD1Writer` function takes three parameters, all of which can be found in the [Cloudflare Dashboard](https://dash.cloudflare.com/):
 
-| 参数 | 获取方式 |
-|------|----------|
-| `accountId` | Dashboard 右侧栏 Account ID |
-| `databaseId` | Workers & Pages → D1 → 对应数据库详情页 |
-| `apiToken` | My Profile → API Tokens，需含 D1 读写权限 |
+| Parameter | Where to find it |
+|-----------|------------------|
+| `accountId` | Right sidebar of the main Dashboard. |
+| `databaseId` | Workers & Pages → D1 → Your database details page. |
+| `apiToken` | My Profile → API Tokens (requires D1 read/write permissions). |
 
 ```ts
 import OpenAI from "openai";
@@ -87,25 +89,25 @@ import { LLMCallRecorder, createLoggingFetch, createD1Writer } from "transparent
 
 const recorder = new LLMCallRecorder({
   customWriter: createD1Writer({
-    accountId: "你的 Account ID",
-    databaseId: "你的 D1 Database ID",
-    apiToken: "你的 API Token",
+    accountId: "YOUR_ACCOUNT_ID",
+    databaseId: "YOUR_D1_DATABASE_ID",
+    apiToken: "YOUR_API_TOKEN",
   }),
 });
 
 const client = new OpenAI({
-  apiKey: "你的 OpenAI API Key",
+  apiKey: "YOUR_OPENAI_API_KEY",
   fetch: createLoggingFetch({ recorder, source: "my_agent" }),
 });
 ```
 
-> D1 使用 `INSERT OR REPLACE`，响应返回后的完整记录会自动覆盖请求阶段的记录，最终每次调用在 D1 中只保留一条完整记录。
+> D1 utilizes `INSERT OR REPLACE`, so the complete record retrieved upon the response automatically overwrites the initial request-only record. Thus, exactly one complete record is retained per call.
 
 ---
 
-### 三、同时落库到本地 + D1
+### 3. Log securely to Local + D1
 
-将本地文件路径与 D1 Writer 组合传入即可：
+To use both, provide the local file path alongside the D1 custom writer:
 
 ```ts
 import { LLMCallRecorder, createLoggingFetch, createD1Writer } from "transparent-llm-log";
@@ -113,26 +115,26 @@ import { LLMCallRecorder, createLoggingFetch, createD1Writer } from "transparent
 const recorder = new LLMCallRecorder({
   logPath: "logs/llm_calls.jsonl",
   customWriter: createD1Writer({
-    accountId: "你的 Account ID",
-    databaseId: "你的 D1 Database ID",
-    apiToken: "你的 API Token",
+    accountId: "YOUR_ACCOUNT_ID",
+    databaseId: "YOUR_D1_DATABASE_ID",
+    apiToken: "YOUR_API_TOKEN",
   }),
 });
 
 const client = new OpenAI({
-  apiKey: "你的 OpenAI API Key",
+  apiKey: "YOUR_OPENAI_API_KEY",
   fetch: createLoggingFetch({ recorder, source: "my_agent", writeMode: "async" }),
 });
 ```
 
 ---
 
-## 文档说明
+## Documentation
 
-| 文档 | 说明 |
-|------|------|
-| [schema.sql](./docs/schema.sql) | D1 建表 SQL，首次使用 D1 落库前需执行 |
-| [chat-completions-protocol-review.md](./docs/chat-completions-protocol-review.md) | 记录字段与 OpenAI Chat Completions 协议的对应关系 |
+| File | Description |
+|------|-------------|
+| [schema.sql](./docs/schema.sql) | Table creation SQL for D1. Run this before your first run with D1. |
+| [chat-completions-protocol-review.md](./docs/chat-completions-protocol-review.md) | Mapping between the recorded fields and the OpenAI Chat Completions protocol. |
 
 ---
 

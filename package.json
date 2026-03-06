@@ -9,7 +9,13 @@
     "prepublishOnly": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["llm", "openai", "chat-completions", "logging", "audit"],
+  "keywords": [
+    "llm",
+    "openai",
+    "chat-completions",
+    "logging",
+    "audit"
+  ],
   "author": "cxy13h",
   "license": "ISC",
   "type": "module",
@@ -19,7 +25,9 @@
     "typescript": "^5.9.3"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "README_ZH.md"
   ],
   "exports": {
     ".": {
