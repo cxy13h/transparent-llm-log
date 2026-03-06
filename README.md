@@ -55,12 +55,17 @@ The simplest use case. Logs will be written to a local file, and the directory w
 import OpenAI from "openai";
 import { createFileRecorder, createLoggingFetch } from "transparent-llm-log";
 
+// Initialize a local file recorder
 const recorder = createFileRecorder("logs/llm_calls.jsonl");
+
+// Use createLoggingFetch to wrap the fetch method
+// 'writeMode' is optional. "async" writes in background, "sync" (default) waits for the write to finish
 const client = new OpenAI({
   apiKey: "YOUR_OPENAI_API_KEY",
   fetch: createLoggingFetch({ recorder, source: "my_agent", writeMode: "async" }),
 });
 
+// Call the OpenAI SDK as usual — it's automatically logged!
 const res = await client.chat.completions.create({
   model: "gpt-4o-mini",
   messages: [{ role: "user", content: "Hello" }],
@@ -87,6 +92,7 @@ The `createD1Writer` function takes three parameters, all of which can be found 
 import OpenAI from "openai";
 import { LLMCallRecorder, createLoggingFetch, createD1Writer } from "transparent-llm-log";
 
+// Initialize the recorder with a D1 custom writer
 const recorder = new LLMCallRecorder({
   customWriter: createD1Writer({
     accountId: "YOUR_ACCOUNT_ID",
@@ -95,6 +101,8 @@ const recorder = new LLMCallRecorder({
   }),
 });
 
+// Use createLoggingFetch to wrap the fetch method
+// By default, writeMode is "sync"
 const client = new OpenAI({
   apiKey: "YOUR_OPENAI_API_KEY",
   fetch: createLoggingFetch({ recorder, source: "my_agent" }),
@@ -110,8 +118,10 @@ const client = new OpenAI({
 To use both, provide the local file path alongside the D1 custom writer:
 
 ```ts
+import OpenAI from "openai";
 import { LLMCallRecorder, createLoggingFetch, createD1Writer } from "transparent-llm-log";
 
+// Initialize the recorder with both logPath and customWriter
 const recorder = new LLMCallRecorder({
   logPath: "logs/llm_calls.jsonl",
   customWriter: createD1Writer({
@@ -121,6 +131,8 @@ const recorder = new LLMCallRecorder({
   }),
 });
 
+// Use createLoggingFetch to wrap the fetch method
+// Here "async" writeMode ensures the API response isn't delayed by D1 latency
 const client = new OpenAI({
   apiKey: "YOUR_OPENAI_API_KEY",
   fetch: createLoggingFetch({ recorder, source: "my_agent", writeMode: "async" }),

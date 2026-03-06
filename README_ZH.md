@@ -55,12 +55,17 @@ npm install transparent-llm-log
 import OpenAI from "openai";
 import { createFileRecorder, createLoggingFetch } from "transparent-llm-log";
 
+// 初始化本地文件记录器
 const recorder = createFileRecorder("logs/llm_calls.jsonl");
+
+// 传入 createLoggingFetch 劫持 OpenAI 客户端的 fetch 方法
+// writeMode 是可选配置项："async" 表示后台异步落库，"sync"（默认值）表示等待落库完成再返回
 const client = new OpenAI({
   apiKey: "你的 OpenAI API Key",
   fetch: createLoggingFetch({ recorder, source: "my_agent", writeMode: "async" }),
 });
 
+// 正常调用 OpenAI SDK 即可，底层会自动记录请求与响应日志！
 const res = await client.chat.completions.create({
   model: "gpt-4o-mini",
   messages: [{ role: "user", content: "Hello" }],
@@ -86,6 +91,7 @@ const res = await client.chat.completions.create({
 import OpenAI from "openai";
 import { LLMCallRecorder, createLoggingFetch, createD1Writer } from "transparent-llm-log";
 
+// 初始化带 D1 Writer 的记录器
 const recorder = new LLMCallRecorder({
   customWriter: createD1Writer({
     accountId: "你的 Account ID",
@@ -94,6 +100,8 @@ const recorder = new LLMCallRecorder({
   }),
 });
 
+// 传入 createLoggingFetch 劫持 OpenAI 客户端的 fetch 方法
+// writeMode 默认为 "sync" (同步) 模式
 const client = new OpenAI({
   apiKey: "你的 OpenAI API Key",
   fetch: createLoggingFetch({ recorder, source: "my_agent" }),
@@ -109,8 +117,10 @@ const client = new OpenAI({
 将本地文件路径与 D1 Writer 组合传入即可：
 
 ```ts
+import OpenAI from "openai";
 import { LLMCallRecorder, createLoggingFetch, createD1Writer } from "transparent-llm-log";
 
+// 初始化同时指定本地文件路径和 D1 Writer 的记录器
 const recorder = new LLMCallRecorder({
   logPath: "logs/llm_calls.jsonl",
   customWriter: createD1Writer({
@@ -120,6 +130,8 @@ const recorder = new LLMCallRecorder({
   }),
 });
 
+// 传入 createLoggingFetch 劫持 OpenAI 客户端的 fetch 方法
+// 此处启用 "async" 模式，避免网络或 D1 的延迟阻塞接口响应
 const client = new OpenAI({
   apiKey: "你的 OpenAI API Key",
   fetch: createLoggingFetch({ recorder, source: "my_agent", writeMode: "async" }),
