@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { LogHub, LocalLogger, D1Logger, trackFetch } from "./src/index.js";
+import { LogHub, LocalLogger, D1Logger, FetchInterceptor } from "./src/index.js";
 
 async function runTest() {
   console.log("=== 正在初始化 transparent-llm-log ===");
@@ -19,11 +19,14 @@ async function runTest() {
     ],
   });
 
-  // 2. 将 LogHub 挂载到 OpenAI Client 的 fetch 拦截器上
+  // 2. 实例化 FetchInterceptor 拦截器（面向对象风格）
+  const interceptor = new FetchInterceptor({ hub, source: "test_script" });
+
+  // 3. 将其具体的 intercept 方法挂载到 OpenAI Client
   const client = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
     baseURL: process.env.OPENAI_BASE_URL,
-    fetch: trackFetch({ hub, source: "test_script" }),
+    fetch: interceptor.intercept,
   });
 
   console.log("配置就绪，即将发起 OpenAI 请求...");

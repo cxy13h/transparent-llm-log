@@ -7,7 +7,7 @@ export {
   LocalLogger,
 } from "./local-writer.js";
 export {
-  trackFetch,
+  FetchInterceptor,
 } from "./logging-fetch.js";
 export {
   D1Logger,

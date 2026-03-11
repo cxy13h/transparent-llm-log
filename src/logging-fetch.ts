@@ -49,20 +49,28 @@ function extractResponse(body: Record<string, unknown>): {
   };
 }
 
-export function trackFetch(options: {
-  hub: LogHub;
-  source?: string;
-  realFetch?: typeof fetch;
-}): typeof fetch {
-  const { hub, source, realFetch = globalThis.fetch } = options;
+export class FetchInterceptor {
+  private hub: LogHub;
+  private source?: string;
+  private realFetch: typeof fetch;
 
-  return async function trackedFetch(
+  constructor(options: { hub: LogHub; source?: string; realFetch?: typeof fetch }) {
+    this.hub = options.hub;
+    this.source = options.source;
+    this.realFetch = options.realFetch || globalThis.fetch;
+  }
+
+  /**
+   * 拦截执行真正的请求（已通过箭头函数绑定 this）。
+   * 该方法兼容原生的 fetch 签名。
+   */
+  public intercept = async (
     input: RequestInfo | URL,
     init?: RequestInit
-  ): Promise<Response> {
+  ): Promise<Response> => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     if (!url.includes(CHAT_COMPLETIONS)) {
-      return realFetch(input, init);
+      return this.realFetch(input, init);
     }
 
     const requestId = crypto.randomUUID();
@@ -94,12 +102,12 @@ export function trackFetch(options: {
       messages,
       extra_params,
       success: false,
-      source,
+      source: this.source,
     };
-    hub.write(requestRecord);
+    this.hub.write(requestRecord);
 
     try {
-      const response = await realFetch(input, init);
+      const response = await this.realFetch(input, init);
       // 响应返回后，写入完整记录（D1 会覆盖同一 request_id记录；JSONL 会另追加一行）。
       const end = performance.now();
       const latencyMs = Math.round((end - start) * 100) / 100;
@@ -149,9 +157,9 @@ export function trackFetch(options: {
         error_type: errorType,
         error_message: errorMessage,
         status_code: response.status,
-        source,
+        source: this.source,
       };
-      hub.write(record);
+      this.hub.write(record);
 
       return response;
     } catch (e) {
@@ -171,10 +179,10 @@ export function trackFetch(options: {
         latency_ms: latencyMs,
         error_type: err.name,
         error_message: err.message,
-        status_code: undefined,
-        source,
+        status_code: 500,
+        source: this.source,
       };
-      hub.write(record);
+      this.hub.write(record);
       throw e;
     }
   };

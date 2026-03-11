@@ -51,19 +51,24 @@ npm install transparent-llm-log
 
 最简用法，日志写入本地文件，目录不存在会自动创建。
 
-```ts
+```typescript
 import OpenAI from "openai";
-import { LogHub, LocalLogger, trackFetch } from "transparent-llm-log";
+import { LogHub, LocalLogger, FetchInterceptor } from "transparent-llm-log";
 
-// 初始化日志调度中心，并挂载本地文件 Logger
+// 初始化日志中心与本地文件适配器
 const hub = new LogHub({
-  loggers: [new LocalLogger("logs/llm_calls.jsonl")],
+  loggers: [
+    new LocalLogger("logs/llm-calls.jsonl")
+  ]
 });
 
-// 用 trackFetch 劫持 OpenAI 客户端的 fetch 方法
+// 构建基于面向对象的日志拦截器
+const interceptor = new FetchInterceptor({ hub, source: "Backend_Service_A" });
+
+// 使用 OpenAI SDK 自带参数注入拦截函数
 const client = new OpenAI({
-  apiKey: "你的 OpenAI API Key",
-  fetch: trackFetch({ hub, source: "my_agent" }),
+  apiKey: "your-api-key",
+  fetch: interceptor.intercept, // 绑定执行环境并进行记录
 });
 
 // 正常调用 OpenAI SDK 即可，底层会自动记录请求与响应日志！

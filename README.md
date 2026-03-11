@@ -53,17 +53,20 @@ The simplest use case. Logs will be written to a local file, and the directory w
 
 ```ts
 import OpenAI from "openai";
-import { LogHub, LocalLogger, trackFetch } from "transparent-llm-log";
+import { LogHub, LocalLogger, FetchInterceptor } from "transparent-llm-log";
 
 // Initialize the log hub with a local file Logger
 const hub = new LogHub({
   loggers: [new LocalLogger("logs/llm_calls.jsonl")],
 });
 
-// Use trackFetch to wrap the OpenAI client's fetch method
+// Configure the FetchInterceptor class
+const interceptor = new FetchInterceptor({ hub, source: "my_agent" });
+
+// Use the bound intercept method to wrap the OpenAI client's fetch
 const client = new OpenAI({
   apiKey: "YOUR_OPENAI_API_KEY",
-  fetch: trackFetch({ hub, source: "my_agent" }),
+  fetch: interceptor.intercept,
 });
 
 // Call the OpenAI SDK as usual — it's automatically logged!
@@ -91,7 +94,7 @@ The `createD1Writer` function takes three parameters, all of which can be found 
 
 ```ts
 import OpenAI from "openai";
-import { LogHub, D1Logger, trackFetch } from "transparent-llm-log";
+import { LogHub, D1Logger, FetchInterceptor } from "transparent-llm-log";
 
 // Initialize the log hub with a D1 Logger
 const hub = new LogHub({
@@ -104,10 +107,13 @@ const hub = new LogHub({
   ]
 });
 
-// Use trackFetch to wrap the OpenAI client's fetch method
+// Configure the FetchInterceptor class
+const interceptor = new FetchInterceptor({ hub, source: "my_agent" });
+
+// Use the bound intercept method to wrap the OpenAI client's fetch
 const client = new OpenAI({
   apiKey: "YOUR_OPENAI_API_KEY",
-  fetch: trackFetch({ hub, source: "my_agent" }),
+  fetch: interceptor.intercept,
 });
 ```
 
@@ -121,7 +127,7 @@ To use both, provide the local file path alongside the D1 custom writer:
 
 ```ts
 import OpenAI from "openai";
-import { LogHub, LocalLogger, D1Logger, trackFetch } from "transparent-llm-log";
+import { LogHub, LocalLogger, D1Logger, FetchInterceptor } from "transparent-llm-log";
 
 // Initialize the log hub with both local file and D1 loggers
 const hub = new LogHub({
@@ -135,10 +141,13 @@ const hub = new LogHub({
   ]
 });
 
-// Use trackFetch to wrap the OpenAI client's fetch method
+// Configure the FetchInterceptor class
+const interceptor = new FetchInterceptor({ hub, source: "my_agent" });
+
+// Use the bound intercept method to wrap the OpenAI client's fetch
 const client = new OpenAI({
   apiKey: "YOUR_OPENAI_API_KEY",
-  fetch: trackFetch({ hub, source: "my_agent" }),
+  fetch: interceptor.intercept,
 });
 ```
 
