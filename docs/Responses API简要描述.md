@@ -61,7 +61,7 @@
     }
   },
   {
-    "type": "web_search"
+    "type": "web_search" // 原生网络搜索
   },
   {
     "type": "file_search",
@@ -69,6 +69,25 @@
   },
   {
     "type": "code_interpreter"
+  },
+  {
+    "type": "mcp", // 连接外部 MCP (Model Context Protocol) 服务器
+    "mcp": {
+      "server_url": "https://..."
+    }
+  },
+  {
+    "type": "computer_use_preview", // 控制虚拟计算机 (屏幕/鼠标/键盘)
+    "computer_use_preview": {
+      "display_width": 1024,
+      "display_height": 768
+    }
+  },
+  {
+    "type": "shell" // 原生 Shell 命令执行
+  },
+  {
+    "type": "apply_patch" // 原生代码 Patch 应用工具，用于更新文件内容
   }
 ]
 ```
@@ -173,12 +192,14 @@ API返回一个 **Response** 对象，结构如下：
 
 ---
 
-## 💡 **与Chat Completions的主要区别**
+## 💡 **与Chat Completions的主要区别核心更新**
 
-1. `messages` → `input`（更灵活的输入格式）
-2. `response_format` → `text.format`（结构化输出）
-3. 内置原生工具支持（web_search、file_search等）
-4. 支持有状态对话（通过conversation ID）
-5. 支持推理模型的高级参数（如reasoning.effort）
+1. **输入格式统一**：`messages` 变为 `input`，允许非对话式的直接输入（结构更宽泛灵活）。
+2. **结构化输出强化**：`response_format` 改变为直接在顶层可用的 `text` 参数控制 `format`（如 `json_schema`）。
+3. **原生超强工具链（区别于 Chat Completions 最重要的一点）**：
+   - 不仅支持基础的 `function`, `web_search`, `file_search`, `code_interpreter`。
+   - **新增智能体原生工具**：如 `computer_use_preview` (接管计算机操作)、`shell` (运行系统命令)、`mcp` (Model Context Protocol，通过远程连接各种服务连接器如 Google Drive / Dropbox)、`apply_patch` (用于文件内容按 Patch 更新)。
+4. **有状态对话与缓存**：支持通过 conversation ID 进行状态持久化（`store`），并强化了 `prompt_caching` 控制。
+5. **推理模型的高级参数**：例如更原生的 `reasoning` / `reasoning_effort` 控制。
 
-Responses API是OpenAI推荐的最新接口，适合构建具有工具调用、结构化输出和多模态能力的智能应用。
+总的来说，Responses API 是 OpenAI 为**端到端构建智能体（Agentic workflows）**推荐的最新接口，它内置的工具极大程度省去了开发者自己去实现“让 AI 操作电脑”或“让 AI 调用 Shell”的繁琐步骤。
