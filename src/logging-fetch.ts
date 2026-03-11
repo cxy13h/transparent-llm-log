@@ -100,7 +100,12 @@ export function createLoggingFetch(options: CreateLoggingFetchOptions): typeof f
     const timestampRequest = new Date().toISOString();
     const start = performance.now();
 
-    const bodyStr = typeof init?.body === "string" ? init.body : null;
+    let bodyStr: string | null = null;
+    if (typeof init?.body === "string") {
+      bodyStr = init.body;
+    } else if (init?.body instanceof Blob) {
+      bodyStr = await init.body.text();
+    }
     const reqBody = parseBody(bodyStr);
     let messages: Record<string, unknown>[] = [];
     let model = "";
@@ -126,7 +131,7 @@ export function createLoggingFetch(options: CreateLoggingFetchOptions): typeof f
 
     try {
       const response = await realFetch(input, init);
-      // 响应返回后，落库完整记录覆盖请求阶段的记录。
+      // 响应返回后，写入完整记录（D1 会覆盖同一 request_id记录；JSONL 会另追加一行）。
       const end = performance.now();
       const latencyMs = Math.round((end - start) * 100) / 100;
       const timestampResponse = new Date().toISOString();

@@ -146,8 +146,6 @@ const client = new OpenAI({
 | File | Description |
 |------|-------------|
 | [schema.sql](./docs/schema.sql) | Table creation SQL for D1. Run this before your first run with D1. |
-| [chat-completions-protocol-review.md](./docs/chat-completions-protocol-review.md) | Mapping between the recorded fields and the OpenAI Chat Completions protocol. |
-
 ---
 
 ## License

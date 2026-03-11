@@ -145,8 +145,6 @@ const client = new OpenAI({
 | 文档 | 说明 |
 |------|------|
 | [schema.sql](./docs/schema.sql) | D1 建表 SQL，首次使用 D1 落库前需执行 |
-| [chat-completions-protocol-review.md](./docs/chat-completions-protocol-review.md) | 记录字段与 OpenAI Chat Completions 协议的对应关系 |
-
 ---
 
 ## License
