@@ -53,16 +53,17 @@ npm install transparent-llm-log
 
 ```ts
 import OpenAI from "openai";
-import { createFileRecorder, createLoggingFetch } from "transparent-llm-log";
+import { LogHub, LocalLogger, trackFetch } from "transparent-llm-log";
 
-// 初始化本地文件记录器
-const recorder = createFileRecorder("logs/llm_calls.jsonl");
+// 初始化日志调度中心，并挂载本地文件 Logger
+const hub = new LogHub({
+  loggers: [new LocalLogger("logs/llm_calls.jsonl")],
+});
 
-// 传入 createLoggingFetch 劫持 OpenAI 客户端的 fetch 方法
-// writeMode 是可选配置项："async" 表示后台异步落库，"sync"（默认值）表示等待落库完成再返回
+// 用 trackFetch 劫持 OpenAI 客户端的 fetch 方法
 const client = new OpenAI({
   apiKey: "你的 OpenAI API Key",
-  fetch: createLoggingFetch({ recorder, source: "my_agent", writeMode: "async" }),
+  fetch: trackFetch({ hub, source: "my_agent" }),
 });
 
 // 正常调用 OpenAI SDK 即可，底层会自动记录请求与响应日志！
@@ -89,22 +90,23 @@ const res = await client.chat.completions.create({
 
 ```ts
 import OpenAI from "openai";
-import { LLMCallRecorder, createLoggingFetch, createD1Writer } from "transparent-llm-log";
+import { LogHub, D1Logger, trackFetch } from "transparent-llm-log";
 
-// 初始化带 D1 Writer 的记录器
-const recorder = new LLMCallRecorder({
-  customWriter: createD1Writer({
-    accountId: "你的 Account ID",
-    databaseId: "你的 D1 Database ID",
-    apiToken: "你的 API Token",
-  }),
+// 初始化日志调度中心，并挂载 D1 Logger
+const hub = new LogHub({
+  loggers: [
+    new D1Logger({
+      accountId: "你的 Account ID",
+      databaseId: "你的 D1 Database ID",
+      apiToken: "你的 API Token",
+    })
+  ]
 });
 
-// 传入 createLoggingFetch 劫持 OpenAI 客户端的 fetch 方法
-// writeMode 默认为 "sync" (同步) 模式
+// 用 trackFetch 劫持 OpenAI 客户端的 fetch 方法
 const client = new OpenAI({
   apiKey: "你的 OpenAI API Key",
-  fetch: createLoggingFetch({ recorder, source: "my_agent" }),
+  fetch: trackFetch({ hub, source: "my_agent" }),
 });
 ```
 
@@ -114,27 +116,28 @@ const client = new OpenAI({
 
 ### 三、同时落库到本地 + D1
 
-将本地文件路径与 D1 Writer 组合传入即可：
+将本地文件 Writer 与 D1 Writer 同时放入数组传入即可：
 
 ```ts
 import OpenAI from "openai";
-import { LLMCallRecorder, createLoggingFetch, createD1Writer } from "transparent-llm-log";
+import { LogHub, LocalLogger, D1Logger, trackFetch } from "transparent-llm-log";
 
-// 初始化同时指定本地文件路径和 D1 Writer 的记录器
-const recorder = new LLMCallRecorder({
-  logPath: "logs/llm_calls.jsonl",
-  customWriter: createD1Writer({
-    accountId: "你的 Account ID",
-    databaseId: "你的 D1 Database ID",
-    apiToken: "你的 API Token",
-  }),
+// 初始化日志调度中心，同时挂载本地文件和 D1 两个 Logger
+const hub = new LogHub({
+  loggers: [
+    new LocalLogger("logs/llm_calls.jsonl"),
+    new D1Logger({
+      accountId: "你的 Account ID",
+      databaseId: "你的 D1 Database ID",
+      apiToken: "你的 API Token",
+    })
+  ]
 });
 
-// 传入 createLoggingFetch 劫持 OpenAI 客户端的 fetch 方法
-// 此处启用 "async" 模式，避免网络或 D1 的延迟阻塞接口响应
+// 用 trackFetch 劫持 OpenAI 客户端的 fetch 方法
 const client = new OpenAI({
   apiKey: "你的 OpenAI API Key",
-  fetch: createLoggingFetch({ recorder, source: "my_agent", writeMode: "async" }),
+  fetch: trackFetch({ hub, source: "my_agent" }),
 });
 ```
 

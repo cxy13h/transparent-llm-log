@@ -1,16 +1,16 @@
 export {
-  LLMCallRecorder,
-  createFileRecorder,
-  type LLMCallRecord,
-  type LLMCallRecorderWriter,
+  LogHub,
+  type LogEntity,
+  type Logger,
 } from "./recorder.js";
 export {
-  createLoggingFetch,
-  type CreateLoggingFetchOptions,
-  type StreamCompletionRecord,
+  LocalLogger,
+} from "./local-writer.js";
+export {
+  trackFetch,
 } from "./logging-fetch.js";
 export {
-  createD1Writer,
+  D1Logger,
   d1QuerySelect,
-  type D1WriterConfig,
+  type D1LoggerConfig,
 } from "./d1-writer.js";

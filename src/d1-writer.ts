@@ -1,11 +1,11 @@
 /**
- * 将 LLMCallRecord 写入 Cloudflare D1。
- * 使用 D1 REST API：POST /client/v4/accounts/:account_id/d1/database/:database_id/query
+ * D1Logger：将 CallRecord 写入 Cloudflare D1 的 Logger 实现。
+ * 通过 D1 REST API：POST /client/v4/accounts/:account_id/d1/database/:database_id/query
  */
 
-import type { LLMCallRecord } from "./recorder.js";
+import type { LogEntity, Logger } from "./recorder.js";
 
-export interface D1WriterConfig {
+export interface D1LoggerConfig {
   accountId: string;
   databaseId: string;
   apiToken: string;
@@ -25,7 +25,7 @@ function toJson(v: unknown): string | null {
 }
 
 async function d1Query(
-  config: D1WriterConfig,
+  config: D1LoggerConfig,
   sql: string,
   params: unknown[]
 ): Promise<{ success: boolean; error?: string }> {
@@ -50,18 +50,16 @@ async function d1Query(
   return { success: true };
 }
 
-/**
- * 返回可传给 LLMCallRecorder 的 customWriter，将每条记录 INSERT 到 D1 的 llm_calls 表。
- * 写入为异步（fire-and-forget），不阻塞主流程。
- */
-export function createD1Writer(config: D1WriterConfig): (record: LLMCallRecord) => void {
-  const sql = `INSERT OR REPLACE INTO llm_calls (
-    request_id, timestamp_request, model, messages, extra_params,
-    success, timestamp_response, latency_ms, response_message, usage,
-    finish_reason, error_type, error_message, status_code, source
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+const INSERT_SQL = `INSERT OR REPLACE INTO llm_calls (
+  request_id, timestamp_request, model, messages, extra_params,
+  success, timestamp_response, latency_ms, response_message, usage,
+  finish_reason, error_type, error_message, status_code, source
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-  return (record: LLMCallRecord) => {
+export class D1Logger implements Logger {
+  constructor(private config: D1LoggerConfig) {}
+
+  write(record: LogEntity): void {
     const params = [
       record.request_id,
       record.timestamp_request,
@@ -79,17 +77,17 @@ export function createD1Writer(config: D1WriterConfig): (record: LLMCallRecord) 
       record.status_code ?? null,
       record.source ?? null,
     ];
-    void d1Query(config, sql, params).then((r) => {
-      if (!r.success) console.error("[transparent-llm-log D1]", r.error);
+    void d1Query(this.config, INSERT_SQL, params).then((r) => {
+      if (!r.success) console.error("[transparent-llm-log:D1Logger]", r.error);
     });
-  };
+  }
 }
 
 /**
  * 执行一条只读 SQL（用于测试或查询），返回 D1 API 的原始 JSON。
  */
 export async function d1QuerySelect(
-  config: D1WriterConfig,
+  config: D1LoggerConfig,
   sql: string,
   params: unknown[] = []
 ): Promise<{ success: boolean; result?: unknown[]; error?: string }> {

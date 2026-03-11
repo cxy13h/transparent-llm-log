@@ -53,16 +53,17 @@ The simplest use case. Logs will be written to a local file, and the directory w
 
 ```ts
 import OpenAI from "openai";
-import { createFileRecorder, createLoggingFetch } from "transparent-llm-log";
+import { LogHub, LocalLogger, trackFetch } from "transparent-llm-log";
 
-// Initialize a local file recorder
-const recorder = createFileRecorder("logs/llm_calls.jsonl");
+// Initialize the log hub with a local file Logger
+const hub = new LogHub({
+  loggers: [new LocalLogger("logs/llm_calls.jsonl")],
+});
 
-// Use createLoggingFetch to wrap the fetch method
-// 'writeMode' is optional. "async" writes in background, "sync" (default) waits for the write to finish
+// Use trackFetch to wrap the OpenAI client's fetch method
 const client = new OpenAI({
   apiKey: "YOUR_OPENAI_API_KEY",
-  fetch: createLoggingFetch({ recorder, source: "my_agent", writeMode: "async" }),
+  fetch: trackFetch({ hub, source: "my_agent" }),
 });
 
 // Call the OpenAI SDK as usual — it's automatically logged!
@@ -90,22 +91,23 @@ The `createD1Writer` function takes three parameters, all of which can be found 
 
 ```ts
 import OpenAI from "openai";
-import { LLMCallRecorder, createLoggingFetch, createD1Writer } from "transparent-llm-log";
+import { LogHub, D1Logger, trackFetch } from "transparent-llm-log";
 
-// Initialize the recorder with a D1 custom writer
-const recorder = new LLMCallRecorder({
-  customWriter: createD1Writer({
-    accountId: "YOUR_ACCOUNT_ID",
-    databaseId: "YOUR_D1_DATABASE_ID",
-    apiToken: "YOUR_API_TOKEN",
-  }),
+// Initialize the log hub with a D1 Logger
+const hub = new LogHub({
+  loggers: [
+    new D1Logger({
+      accountId: "YOUR_ACCOUNT_ID",
+      databaseId: "YOUR_D1_DATABASE_ID",
+      apiToken: "YOUR_API_TOKEN",
+    })
+  ]
 });
 
-// Use createLoggingFetch to wrap the fetch method
-// By default, writeMode is "sync"
+// Use trackFetch to wrap the OpenAI client's fetch method
 const client = new OpenAI({
   apiKey: "YOUR_OPENAI_API_KEY",
-  fetch: createLoggingFetch({ recorder, source: "my_agent" }),
+  fetch: trackFetch({ hub, source: "my_agent" }),
 });
 ```
 
@@ -119,23 +121,24 @@ To use both, provide the local file path alongside the D1 custom writer:
 
 ```ts
 import OpenAI from "openai";
-import { LLMCallRecorder, createLoggingFetch, createD1Writer } from "transparent-llm-log";
+import { LogHub, LocalLogger, D1Logger, trackFetch } from "transparent-llm-log";
 
-// Initialize the recorder with both logPath and customWriter
-const recorder = new LLMCallRecorder({
-  logPath: "logs/llm_calls.jsonl",
-  customWriter: createD1Writer({
-    accountId: "YOUR_ACCOUNT_ID",
-    databaseId: "YOUR_D1_DATABASE_ID",
-    apiToken: "YOUR_API_TOKEN",
-  }),
+// Initialize the log hub with both local file and D1 loggers
+const hub = new LogHub({
+  loggers: [
+    new LocalLogger("logs/llm_calls.jsonl"),
+    new D1Logger({
+      accountId: "YOUR_ACCOUNT_ID",
+      databaseId: "YOUR_D1_DATABASE_ID",
+      apiToken: "YOUR_API_TOKEN",
+    })
+  ]
 });
 
-// Use createLoggingFetch to wrap the fetch method
-// Here "async" writeMode ensures the API response isn't delayed by D1 latency
+// Use trackFetch to wrap the OpenAI client's fetch method
 const client = new OpenAI({
   apiKey: "YOUR_OPENAI_API_KEY",
-  fetch: createLoggingFetch({ recorder, source: "my_agent", writeMode: "async" }),
+  fetch: trackFetch({ hub, source: "my_agent" }),
 });
 ```
 

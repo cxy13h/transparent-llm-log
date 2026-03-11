@@ -1,9 +1,9 @@
 /**
- * 包装 fetch：仅对 chat/completions 请求做无感记录（请求体、时间戳、成功与否、回调结果等）。
- * 请求/响应格式遵循 OpenAI Chat Completions API，详见 docs/chat-completions-protocol-review.md。
+ * trackFetch：包装 fetch，对 chat/completions 请求进行无感记录。
+ * 请求/响应格式遵循 OpenAI Chat Completions API。
  */
 
-import type { LLMCallRecord, LLMCallRecorder } from "./recorder.js";
+import type { LogEntity, LogHub } from "./recorder.js";
 
 const CHAT_COMPLETIONS = "chat/completions";
 
@@ -49,45 +49,14 @@ function extractResponse(body: Record<string, unknown>): {
   };
 }
 
-/**
- * 流式结束时写入的汇总记录。
- * 当前未实现流式解析，此类型仅作预留；实现时由消费端聚合 content/usage 后填入 LLMCallRecord 并传入回调。
- */
-export type StreamCompletionRecord = LLMCallRecord;
-
-export interface CreateLoggingFetchOptions {
-  recorder: LLMCallRecorder;
+export function trackFetch(options: {
+  hub: LogHub;
   source?: string;
-  /** 实际发请求的 fetch，默认 globalThis.fetch */
   realFetch?: typeof fetch;
-  /**
-   * 落库模式：sync = 等落库完成后再把响应返回给调用方；async = 先返回响应，落库在后台执行，不阻塞调用方。
-   * 默认 "sync"。
-   */
-  writeMode?: "sync" | "async";
-  /**
-   * 预留：流式（stream: true）请求在流结束后的汇总记录回调。
-   * 当前不实现流式解析，此回调不会被调用；后续实现时将在聚合 SSE 得到完整 message/usage 后调用。
-   */
-  onStreamComplete?: (record: StreamCompletionRecord) => void;
-}
+}): typeof fetch {
+  const { hub, source, realFetch = globalThis.fetch } = options;
 
-export function createLoggingFetch(options: CreateLoggingFetchOptions): typeof fetch {
-  const { recorder, source, realFetch = globalThis.fetch, writeMode = "sync", onStreamComplete } = options;
-  // 预留：后续若实现流式，可在此根据 reqBody?.stream === true 分支处理 SSE，结束时调用 onStreamComplete(aggregatedRecord)
-  // 异步模式下串行落库，避免并发 appendFile 导致本地 JSONL 行顺序错乱
-  let writeTail: Promise<void> = Promise.resolve();
-  const doWrite = (record: LLMCallRecord) => {
-    if (writeMode === "async") {
-      writeTail = writeTail
-        .then(() => recorder.writeAsync(record))
-        .catch((err) => console.error("[transparent-llm-log]", err));
-    } else {
-      recorder.write(record);
-    }
-  };
-
-  return async function loggingFetch(
+  return async function trackedFetch(
     input: RequestInfo | URL,
     init?: RequestInit
   ): Promise<Response> {
@@ -118,7 +87,7 @@ export function createLoggingFetch(options: CreateLoggingFetchOptions): typeof f
     }
 
     // ---- 请求阶段落库（响应字段留空） ----
-    const requestRecord: LLMCallRecord = {
+    const requestRecord: LogEntity = {
       request_id: requestId,
       timestamp_request: timestampRequest,
       model,
@@ -127,7 +96,7 @@ export function createLoggingFetch(options: CreateLoggingFetchOptions): typeof f
       success: false,
       source,
     };
-    doWrite(requestRecord);
+    hub.write(requestRecord);
 
     try {
       const response = await realFetch(input, init);
@@ -165,7 +134,7 @@ export function createLoggingFetch(options: CreateLoggingFetchOptions): typeof f
       }
 
       // ---- 响应阶段落库（完整记录） ----
-      const record: LLMCallRecord = {
+      const record: LogEntity = {
         request_id: requestId,
         timestamp_request: timestampRequest,
         model,
@@ -182,7 +151,7 @@ export function createLoggingFetch(options: CreateLoggingFetchOptions): typeof f
         status_code: response.status,
         source,
       };
-      doWrite(record);
+      hub.write(record);
 
       return response;
     } catch (e) {
@@ -191,7 +160,7 @@ export function createLoggingFetch(options: CreateLoggingFetchOptions): typeof f
       const timestampResponse = new Date().toISOString();
       const err = e instanceof Error ? e : new Error(String(e));
       // ---- 响应阶段落库（异常） ----
-      const record: LLMCallRecord = {
+      const record: LogEntity = {
         request_id: requestId,
         timestamp_request: timestampRequest,
         model,
@@ -205,7 +174,7 @@ export function createLoggingFetch(options: CreateLoggingFetchOptions): typeof f
         status_code: undefined,
         source,
       };
-      doWrite(record);
+      hub.write(record);
       throw e;
     }
   };
