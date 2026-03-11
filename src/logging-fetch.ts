@@ -58,16 +58,17 @@ export class FetchInterceptor {
     this.hub = options.hub;
     this.source = options.source;
     this.realFetch = options.realFetch || globalThis.fetch;
+    this.intercept = this.intercept.bind(this);
   }
 
   /**
-   * 拦截执行真正的请求（已通过箭头函数绑定 this）。
+   * 拦截执行真正的请求。
    * 该方法兼容原生的 fetch 签名。
    */
-  public intercept = async (
+  public async intercept(
     input: RequestInfo | URL,
     init?: RequestInit
-  ): Promise<Response> => {
+  ): Promise<Response> {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     if (!url.includes(CHAT_COMPLETIONS)) {
       return this.realFetch(input, init);
@@ -108,9 +109,7 @@ export class FetchInterceptor {
 
     try {
       const response = await this.realFetch(input, init);
-      // 响应返回后，写入完整记录（D1 会覆盖同一 request_id记录；JSONL 会另追加一行）。
-      const end = performance.now();
-      const latencyMs = Math.round((end - start) * 100) / 100;
+      // 此时只收到了响应头，我们先把响应时间打个戳
       const timestampResponse = new Date().toISOString();
       const success = response.ok;
 
@@ -120,8 +119,14 @@ export class FetchInterceptor {
       let errorType: string | undefined;
       let errorMessage: string | undefined;
 
+      // 开始下载并缓冲大模型一点点挤出来的全盘响应流
       const cloned = response.clone();
       const text = await cloned.text();
+      
+      // 当连珠炮一样的文字彻底下完后，才是真实的最终业务耗时！
+      const end = performance.now();
+      const latencyMs = Math.round((end - start) * 100) / 100;
+
       const respBody = parseBody(text);
 
       if (success && respBody) {

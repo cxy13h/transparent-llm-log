@@ -34,12 +34,14 @@ async function runTest() {
   const model = process.env.OPENAI_MODEL || "gpt-3.5-turbo";
 
   try {
+    const start = performance.now();
     const res = await client.chat.completions.create({
       model: model,
       messages: [{ role: "user", content: "你好，请简单的介绍一下自己。" }],
     });
+    const duration = (performance.now() - start).toFixed(2);
 
-    console.log("\n✅ AI 响应成功！返回结果如下:");
+    console.log(`\n✅ AI 响应成功！(耗时: ${duration} ms) 返回结果如下:`);
     console.log(res.choices[0].message.content);
 
     console.log("\n✅ transparent-llm-log 已在后台完成拦截与记录！");

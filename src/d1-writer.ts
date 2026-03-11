@@ -83,36 +83,4 @@ export class D1Logger implements Logger {
   }
 }
 
-/**
- * 执行一条只读 SQL（用于测试或查询），返回 D1 API 的原始 JSON。
- */
-export async function d1QuerySelect(
-  config: D1LoggerConfig,
-  sql: string,
-  params: unknown[] = []
-): Promise<{ success: boolean; result?: unknown[]; error?: string }> {
-  const base = config.baseUrl ?? DEFAULT_BASE;
-  const url = `${base}/client/v4/accounts/${config.accountId}/d1/database/${config.databaseId}/query`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${config.apiToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ sql, params }),
-  });
-  const body = (await res.json()) as {
-    success?: boolean;
-    result?: Array<{ results?: unknown[] }>;
-    errors?: Array<{ message?: string }>;
-  };
-  if (!res.ok) {
-    const msg = body.errors?.[0]?.message ?? res.statusText;
-    return { success: false, error: String(msg) };
-  }
-  if (body.success === false) {
-    return { success: false, error: String(body.errors ?? "Unknown D1 error") };
-  }
-  const results = body.result?.[0]?.results ?? [];
-  return { success: true, result: results as unknown[] };
-}
+
