@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { LogHub, LocalLogger, D1Logger, FetchInterceptor } from "./src/index.js";
+import { LogHub, LocalLogger, D1Logger, FetchInterceptor } from "./dist/index.js";
 
 async function runTest() {
   console.log("=== 正在初始化 transparent-llm-log ===");
