@@ -4,7 +4,7 @@ A zero-intrusion LLM API call logging library supporting OpenAI Chat Completions
 
 ## Features
 
-- Zero Intrusion: No changes to business logic required
+- Zero Intrusion: No need to modify business code
 - Complete Recording: Captures request parameters, response content, latency, usage statistics, and error information
 - Multiple Storage Options: Supports local JSONL files and Cloudflare D1 database
 
@@ -25,9 +25,9 @@ const hub = new LogHub({
   loggers: [
     new LocalLogger("logs/llm_calls.jsonl"),
     new D1Logger({
-      accountId: process.env.CLOUDFLARE_ACCOUNT_ID!,
-      databaseId: process.env.CLOUDFLARE_D1_DATABASE_ID!,
-      apiToken: process.env.CLOUDFLARE_API_TOKEN!,
+      accountId: "cloudflare_account_id",
+      databaseId: "d1_database_id",
+      apiToken: "cloudflare_api_token(edit)",
     }),
   ],
 });
@@ -37,8 +37,8 @@ const interceptor = new FetchInterceptor({ hub, source: "my-app" });
 
 // 3. Inject into OpenAI client
 const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL,
+  apiKey: "**",
+  baseURL: "**",
   fetch: interceptor.intercept,
 });
 
@@ -48,64 +48,6 @@ const res = await client.chat.completions.create({
   messages: [{ role: "user", content: "Hello" }],
 });
 ```
-
-## API
-
-### LogHub
-
-```typescript
-const hub = new LogHub({
-  loggers: [
-    new LocalLogger("path/to/log.jsonl"),
-    new D1Logger(config),
-  ],
-});
-```
-
-### LocalLogger
-
-```typescript
-new LocalLogger(logPath: string)
-```
-
-**Parameters:**
-
-| Parameter | Type | Required |
-|-----------|--------|-----------|
-| `logPath` | `string` | Yes |
-
-### D1Logger
-
-```typescript
-new D1Logger(config: D1LoggerConfig)
-```
-
-**Configuration:**
-
-| Parameter | Type | Required |
-|-----------|--------|-----------|
-| `accountId` | `string` | Yes |
-| `databaseId` | `string` | Yes |
-| `apiToken` | `string` | Yes |
-| `baseUrl` | `string` | No |
-
-### FetchInterceptor
-
-```typescript
-new FetchInterceptor(options: {
-  hub: LogHub;
-  source?: string;
-  realFetch?: typeof fetch;
-})
-```
-
-**Configuration:**
-
-| Parameter | Type | Required |
-|-----------|--------|-----------|
-| `hub` | `LogHub` | Yes |
-| `source` | `string` | No |
-| `realFetch` | `typeof fetch` | No |
 
 ## D1 Database Setup
 
