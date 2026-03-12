@@ -44,15 +44,20 @@ export class LogHub {
   /**
    * 将记录分发给所有 Logger 异步执行，立即返回不阻塞调用方。
    */
-  write(record: LogEntity): void {
+  public write(record: LogEntity): void {
     const payload = { ...record } as LogEntity;
 
-    this.loggers.forEach(async (logger) => {
-      try {
-        await logger.write(payload);
-      } catch (err) {
-        console.error("[transparent-llm-log:LogHub] Logger Error:", err);
-      }
-    });
+    for (let i = 0; i < this.loggers.length; i++) {
+      const logger = this.loggers[i];
+      void this.executeLogger(logger, payload);
+    }
+  }
+
+  private async executeLogger(logger: Logger, payload: LogEntity): Promise<void> {
+    try {
+      await logger.write(payload);
+    } catch (err) {
+      console.error("[transparent-llm-log:LogHub] Logger Error:", err);
+    }
   }
 }
