@@ -22,7 +22,11 @@ export class D1Logger implements Logger {
     finish_reason, error_type, error_message, status_code, source
   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-  constructor(private config: D1LoggerConfig) {}
+  private config: D1LoggerConfig;
+
+  constructor(config: D1LoggerConfig) {
+    this.config = config;
+  }
 
   private toJson(v: unknown): string | null {
     if (v == null) return null;
