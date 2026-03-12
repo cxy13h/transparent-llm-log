@@ -3,7 +3,7 @@
  * 通过 D1 REST API：POST /client/v4/accounts/:account_id/d1/database/:database_id/query
  */
 
-import type { LogEntity, Logger } from "./recorder.js";
+import type { LogEntity, Logger } from "../recorder.js";
 
 export interface D1LoggerConfig {
   accountId: string;
