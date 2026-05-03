@@ -1,39 +1,30 @@
 {
   "name": "transparent-llm-log",
-  "version": "0.0.2",
-  "description": "a zero-intrusion LLM call logging library",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "scripts": {
-    "build": "tsc",
-    "prepublishOnly": "npm run build",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [
-    "llm",
-    "openai",
-    "chat-completions",
-    "logging",
-    "audit"
-  ],
-  "author": "cxy13h",
-  "license": "ISC",
+  "version": "0.1.0",
+  "description": "A zero-intrusion LLM API call logging library",
   "type": "module",
-  "dependencies": {},
-  "devDependencies": {
-    "@types/node": "^25.3.5",
-    "typescript": "^5.9.3"
-  },
-  "files": [
-    "dist",
-    "README.md",
-    "README_ZH.md"
-  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
+      "import": "./dist/index.js"
     }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.9.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "typescript": "^5.8.3"
   }
 }

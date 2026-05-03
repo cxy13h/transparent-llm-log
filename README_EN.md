@@ -1,16 +1,16 @@
 # transparent-llm-log
 
-`transparent-llm-log` 是一个 TypeScript/Node.js 的 LLM API 调用日志库。
+`transparent-llm-log` is an LLM API call logging library for TypeScript/Node.js.
 
-它通过包装 `fetch`，自动记录 OpenAI / Anthropic 等 SDK 发出的 LLM 请求和响应，并写入 SQLite。你的业务调用代码不需要改。
+It wraps `fetch`, automatically records LLM requests and responses made by SDKs such as OpenAI and Anthropic, and saves them to SQLite. Your business calling code stays unchanged.
 
-## 安装
+## Install
 
 ```bash
 npm install transparent-llm-log
 ```
 
-## 使用
+## Usage
 
 ```typescript
 import { createLLMFetch, SqliteStore } from 'transparent-llm-log'
@@ -23,5 +23,5 @@ const fetch = createLLMFetch({ stores: [store], source: 'my-app' })
 const openai = new OpenAI({ fetch })
 const anthropic = new Anthropic({ fetch })
 
-// 之后通过 SDK 发出的 LLM 请求会自动记录到 llm-logs.db
+// LLM requests made through the SDKs are now logged to llm-logs.db
 ```
