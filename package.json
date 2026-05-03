@@ -2,6 +2,25 @@
   "name": "transparent-llm-log",
   "version": "0.1.0",
   "description": "A zero-intrusion LLM API call logging library",
+  "license": "MIT",
+  "author": "cxy13h",
+  "keywords": [
+    "llm",
+    "logging",
+    "openai",
+    "anthropic",
+    "fetch",
+    "sqlite",
+    "typescript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cxy13h/transparent-llm-log.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cxy13h/transparent-llm-log/issues"
+  },
+  "homepage": "https://github.com/cxy13h/transparent-llm-log#readme",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
