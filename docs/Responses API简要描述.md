@@ -1,12 +1,12 @@
 ## 📋 **请求参数 (Request Parameters)**
 
-**主要端点**: `POST /v1/responses` 或 `POST /responses`
+**主要端点**: `POST /v1/responses`
 
 ### 核心参数及格式：
 
 | 参数名 | 类型 | 必填 | 说明 |
 |--------|------|------|------|
-| **model** | string | ✅ 是 | AI模型标识符，如 `"gpt-4o"`、`"gpt-5"` 系列等 |
+| **model** | string | ✅ 是 | AI模型标识符，如 `"gpt-4o"`、`"gpt-5.1"`、`"gpt-5.4"` 等 |
 | **input** | string \| array | ✅ 是 | 用户输入，可以是简单字符串或消息数组 |
 | **instructions** | string | ❌ 否 | 系统提示词，设定模型行为和角色 |
 | **tools** | array | ❌ 否 | 工具列表（函数调用、web搜索、文件搜索等） |
@@ -14,10 +14,12 @@
 | **text** | object | ❌ 否 | 输出格式控制（结构化输出） |
 | **temperature** | number | ❌ 否 | 0-2，控制输出随机性 |
 | **max_output_tokens** | integer | ❌ 否 | 最大输出token数 |
-| **reasoning** | object | ❌ 否 | 推理控制（如 `effort`） |
+| **reasoning** | object | ❌ 否 | 推理控制，含 `effort`（如 `"low"`/`"medium"`/`"high"`）和 `summary`（如 `"auto"`/`"concise"`/`"detailed"`） |
 | **stream** | boolean | ❌ 否 | 是否启用流式响应 |
 | **store** | boolean | ❌ 否 | 是否持久化对话状态 |
 | **include** | array | ❌ 否 | 额外数据（如logprobs、来源） |
+| **previous_response_id** | string | ❌ 否 | 链接到上一个响应，实现简单的有状态多轮对话 |
+| **conversation** | string \| object | ❌ 否 | 绑定到持久对话，支持更复杂的有状态会话管理 |
 
 ### input 参数详细格式：
 
@@ -99,6 +101,7 @@
   "format": {
     "type": "json_schema",
     "name": "calendar_event",
+    "strict": true,
     "schema": {
       "type": "object",
       "properties": {
@@ -106,7 +109,8 @@
         "date": {"type": "string"},
         "location": {"type": "string"}
       },
-      "required": ["title", "date"]
+      "required": ["title", "date"],
+      "additionalProperties": false
     }
   }
 }
@@ -177,7 +181,7 @@ API返回一个 **Response** 对象，结构如下：
 | **object** | string | 固定值 `"response"` |
 | **created_at** | integer | Unix时间戳 |
 | **model** | string | 使用的模型 |
-| **status** | string | 状态：`completed` \| `in_progress` \| `incomplete` |
+| **status** | string | 状态：`completed` \| `in_progress` \| `incomplete`（后台异步任务还有 `queued`、`failed`、`cancelled`） |
 | **output** | array | 输出内容数组 |
 | **usage** | object | Token使用统计 |
 | **error** | object \| null | 错误信息（如有） |

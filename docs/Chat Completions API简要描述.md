@@ -11,7 +11,7 @@
 | **frequency_penalty** | number | ❌ 否 | -2.0到2.0之间，正值根据文本中现有频率惩罚新token，降低重复率 |
 | **presence_penalty** | number | ❌ 否 | -2.0到2.0之间，正值根据文本中是否出现过惩罚新token，鼓励谈论新话题 |
 | **max_completion_tokens** | integer | ❌ 否 | 生成输出token的最大数量（官方推荐使用，替代旧版 max_tokens） |
-| **max_tokens** | integer | ❌ 否 | 遗留参数，生成输出的最大token数 |
+| **max_tokens** | integer | ❌ 否 | ⚠️ 已废弃，生成输出的最大token数（推荐使用 `max_completion_tokens`，o系列推理模型必须使用后者） |
 | **n** | integer | ❌ 否 | 每条请求生成的选项（响应）数量，默认为 1 |
 | **temperature** | number | ❌ 否 | 0到2之间，控制输出随机性（更高的值会使输出更随机） |
 | **top_p** | number | ❌ 否 | 0到1之间，控制核采样，替代 temperature 调整输出随机性 |
@@ -23,13 +23,14 @@
 | **tool_choice** | string \| object | ❌ 否 | 指定模型应该调用哪个工具（如 `"none"`, `"auto"`, `"required"` 或具体的工具对象） |
 | **audio** | object | ❌ 否 | 音频输出的相关参数配置（需要开启对应 modality） |
 | **modalities** | array | ❌ 否 | 设置输出模式，如支持语音时可以设为 `["text", "audio"]` |
-| **service_tier** | string | ❌ 否 | 用以指定请求的处理层级，如 `"auto"` 或 `"default"` |
+| **service_tier** | string | ❌ 否 | 用以指定请求的处理层级，可选 `"auto"`（默认）、`"default"`、`"priority"`、`"flex"`、`"scale"` |
 | **store** | boolean | ❌ 否 | 是否允许 OpenAI 平台持久化存储当前对话内容 |
 
 ### messages 参数详细格式：
 
 ```json
-// messages必须是一个数组
+// messages必须是一个数组，每个元素包含 role 和 content。
+// 支持的 role：system（系统指令）、developer（开发者指令，优先级高于 system）、user（用户）、assistant（助手）、tool（工具返回）
 "messages": [
   {
     "role": "system",
@@ -178,10 +179,10 @@ API调用成功后将返回一个 **ChatCompletion** 对象，包含生成的响
 | **object** | string | 固定值 `"chat.completion"` 或开启流式时的 `"chat.completion.chunk"` |
 | **created** | integer | 响应创建时的 Unix 时间戳 |
 | **model** | string | 生成请求所确实使用的模型名称 |
-| **system_fingerprint** | string | 用于标识后端运行环境特征（可配合观察 seed 采样结果的一致性） |
+| **system_fingerprint** | string | （已废弃，但仍会返回）用于标识后端运行环境特征，可配合 seed 观察采样结果的一致性 |
 | **choices** | array | 包含输出结果的数组。每项内含索引(`index`)、完整的消息内容(`message`)及决定停止生成的原因(`finish_reason`，例如"stop"、"length" 或"tool_calls") |
 | **usage** | object | Token 使用量的详细统计，包含输入 (`prompt_tokens`)、生成 (`completion_tokens`) 及总计 (`total_tokens`) Token 数。可能还嵌套更详细的 `prompt_tokens_details` 或 `completion_tokens_details` 用于计费或数据诊断 |
-| **service_tier** | string | 当前处理的层级标识 |
+| **service_tier** | string | 实际使用的处理层级（可能与请求的 `service_tier` 不同） |
 
 ---
 
