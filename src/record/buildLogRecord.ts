@@ -3,7 +3,8 @@ import type { LogRecord, CommonFields, Protocol } from '../types.js'
 export function buildLogRecord(
   url: string,
   statusCode: number,
-  durationMs: number,
+  requestReceivedAt: number,
+  responseReceivedAt: number,
   protocol: Protocol,
   reqBody: unknown,
   resBody: unknown,
@@ -11,8 +12,8 @@ export function buildLogRecord(
 ): LogRecord {
   const common: CommonFields = {
     requestId: crypto.randomUUID(),
-    timestamp: Date.now(),
-    durationMs,
+    requestReceivedAt,
+    responseReceivedAt,
     protocol,
     statusCode,
     url,

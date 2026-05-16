@@ -48,7 +48,7 @@ export function createLLMFetch(options: CreateLLMFetchOptions): typeof globalThi
   const baseFetch = options.fetch ?? globalThis.fetch
 
   const wrappedFetch: typeof globalThis.fetch = async (input, init) => {
-    const startTime = Date.now()
+    const requestReceivedAt = Date.now()
     const request = new Request(input, init)
     const url = request.url
 
@@ -61,12 +61,21 @@ export function createLLMFetch(options: CreateLLMFetchOptions): typeof globalThi
       const reqBody = await readRequestBody(request)
 
       const response = await baseFetch(request)
+      const responseReceivedAt = Date.now()
       const statusCode = response.status
 
       const resBody = await readResponseBody(response)
 
-      const durationMs = Date.now() - startTime
-      const record = buildLogRecord(url, statusCode, durationMs, protocol, reqBody, resBody, source)
+      const record = buildLogRecord(
+        url,
+        statusCode,
+        requestReceivedAt,
+        responseReceivedAt,
+        protocol,
+        reqBody,
+        resBody,
+        source
+      )
 
       for (const store of stores) {
         try {

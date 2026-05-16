@@ -2,8 +2,8 @@ export type Protocol = 'openai-chat-completions' | 'openai-responses' | 'claude-
 
 export interface CommonFields {
   requestId: string
-  timestamp: number
-  durationMs: number
+  requestReceivedAt: number
+  responseReceivedAt: number
   protocol: Protocol
   statusCode: number
   url: string

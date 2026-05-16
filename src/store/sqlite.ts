@@ -8,18 +8,18 @@ export interface SqliteStoreOptions {
 
 const CREATE_TABLE_SQL = `
 CREATE TABLE IF NOT EXISTS llm_logs (
-  requestId  TEXT PRIMARY KEY,
-  protocol   TEXT NOT NULL,
-  timestamp  INTEGER NOT NULL,
-  durationMs INTEGER NOT NULL,
-  statusCode INTEGER NOT NULL,
-  url        TEXT NOT NULL,
-  source     TEXT,
-  input      TEXT NOT NULL,
-  output     TEXT NOT NULL
+  requestId          TEXT PRIMARY KEY,
+  protocol           TEXT NOT NULL,
+  requestReceivedAt  INTEGER NOT NULL,
+  responseReceivedAt INTEGER NOT NULL,
+  statusCode         INTEGER NOT NULL,
+  url                TEXT NOT NULL,
+  source             TEXT,
+  input              TEXT NOT NULL,
+  output             TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_protocol ON llm_logs(protocol);
-CREATE INDEX IF NOT EXISTS idx_timestamp ON llm_logs(timestamp);
+CREATE INDEX IF NOT EXISTS idx_requestReceivedAt ON llm_logs(requestReceivedAt);
 `
 
 export class SqliteStore implements Store {
@@ -30,7 +30,7 @@ export class SqliteStore implements Store {
     this.db = Database(options.path)
     this.db.exec(CREATE_TABLE_SQL)
     this.stmt = this.db.prepare(
-      'INSERT INTO llm_logs (requestId, protocol, timestamp, durationMs, statusCode, url, source, input, output) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO llm_logs (requestId, protocol, requestReceivedAt, responseReceivedAt, statusCode, url, source, input, output) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
     )
   }
 
@@ -40,8 +40,8 @@ export class SqliteStore implements Store {
       this.stmt.run(
         common.requestId,
         common.protocol,
-        common.timestamp,
-        common.durationMs,
+        common.requestReceivedAt,
+        common.responseReceivedAt,
         common.statusCode,
         common.url,
         common.source ?? null,
